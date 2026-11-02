@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Internal Combustion Engine Digital Twins — Live Interactive Showcase</title>
+  <style>
+    :root {
+      --bg: #080b11;
+      --card-bg: rgba(17, 22, 33, 0.88);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --diesel-amber: #ff9d00;
+      --amg-red: #e61e2a;
+      --bugatti-blue: #0095ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 0%, #1c2538 0%, #070a0f 75%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+    }
+
+    .container {
+      max-width: 1160px;
+      width: 100%;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 44px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      background: rgba(0, 149, 255, 0.15);
+      border: 1px solid rgba(0, 149, 255, 0.4);
+      color: #60a5fa;
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-size: clamp(26px, 4vw, 40px);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 720px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+      text-decoration: none;
+      color: inherit;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .card.diesel:hover { border-color: var(--diesel-amber); }
+    .card.amg:hover { border-color: var(--amg-red); }
+    .card.bugatti:hover { border-color: var(--bugatti-blue); }
+
+    .card-top-bar {
+      height: 4px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+    }
+
+    .card-badge {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      padding: 3px 9px;
+      border-radius: 5px;
+      margin-bottom: 14px;
+      width: fit-content;
+    }
+
+    .card h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+
+    .specs-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 14px;
+    }
+
+    .specs-list li {
+      font-size: 12px;
+      color: #cbd5e1;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .specs-list li strong {
+      color: #fff;
+    }
+
+    .launch-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 700;
+      text-decoration: none;
+      color: #fff;
+      transition: filter 0.15s ease;
+    }
+
+    .launch-btn:hover {
+      filter: brightness(1.12);
+    }
+
+    /* Director Banner */
+    .director-banner {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .director-banner h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .director-banner p {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .director-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    .director-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    footer {
+      margin-top: 44px;
+      font-size: 12.5px;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="eyebrow">BSERC Gen AI Internship • Interactive WebGL Digital Twins</span>
+      <h1>3D Internal Combustion Engine Showcase</h1>
+      <p class="subtitle">
+        Explore real-time cutaway 3D simulations of three iconic powertrain architectures built with Three.js. Orbit in 360°, sweep RPM from idle to redline, inspect valve &amp; timing gear kinematics, and trigger exploded assembly views.
+      </p>
+    </header>
+
+    <div class="cards-grid">
+      <!-- Card 1: 2.0L TDI Diesel -->
+      <a href="diesel_engine_3d.html" class="card diesel">
+        <div class="card-top-bar" style="background: var(--diesel-amber)"></div>
+        <div>
+          <span class="card-badge" style="background: rgba(255, 157, 0, 0.18); color: var(--diesel-amber);">1. Inline-4 Turbo Diesel</span>
+          <h2>2.0L TDI Common-Rail Engine</h2>
+          <p>High-compression direct-injection diesel featuring toroidal bowl-in-piston crowns, a 2,000-bar piezo common-rail, VGT turbocharger plumbing, finned intercooler, and EGR loop.</p>
+          <ul class="specs-list">
+            <li><span>Configuration</span><strong>Inline-4 DOHC (16-Valve)</strong></li>
+            <li><span>Firing Order</span><strong>1 - 3 - 4 - 2 (180° Crank)</strong></li>
+            <li><span>Compression / Injection</span><strong>16.5:1 CR • 2,000 Bar</strong></li>
+            <li><span>Forced Induction</span><strong>Single VGT + Intercooler</strong></li>
+          </ul>
+        </div>
+        <div class="launch-btn" style="background: var(--diesel-amber); color: #000;">Launch 3D Diesel Simulation →</div>
+      </a>
+
+      <!-- Card 2: Mercedes-AMG G63 V8 -->
+      <a href="mercedes_g63_amg_v8_biturbo_3d.html" class="card amg">
+        <div class="card-top-bar" style="background: var(--amg-red)"></div>
+        <div>
+          <span class="card-badge" style="background: rgba(230, 30, 42, 0.2); color: #ff6b72;">2. Mercedes-AMG M177 V8</span>
+          <h2>G 63 AMG 4.0L "Hot-V" Bi-Turbo V8</h2>
+          <p>90° V8 with twin-scroll turbochargers mounted directly inside the cylinder valley for zero turbo lag, outer carbon-weave charge-air manifolds, and dual water-to-air intercoolers.</p>
+          <ul class="specs-list">
+            <li><span>Configuration</span><strong>90° V8 Quad-Cam (32-Valve)</strong></li>
+            <li><span>Firing Order</span><strong>1-5-4-2-6-3-7-8 (Cross-Plane)</strong></li>
+            <li><span>Output</span><strong>577 HP / 850 N·m</strong></li>
+            <li><span>Forced Induction</span><strong>"Hot-Inside-V" Twin-Scroll Bi-Turbo</strong></li>
+          </ul>
+        </div>
+        <div class="launch-btn" style="background: var(--amg-red);">Launch 3D AMG V8 Simulation →</div>
+      </a>
+
+      <!-- Card 3: Bugatti Chiron Super Sport W16 -->
+      <a href="bugatti_chiron_supersport_w16_3d.html" class="card bugatti">
+        <div class="card-top-bar" style="background: var(--bugatti-blue)"></div>
+        <div>
+          <span class="card-badge" style="background: rgba(0, 149, 255, 0.2); color: #60a5fa;">3. Bugatti Chiron Super Sport</span>
+          <h2>8.0L Quad-Turbocharged W16</h2>
+          <p>Two narrow-angle 15° VR8 banks set at a 90° main V-angle with an 8-throw titanium crankshaft, 64 valves, 32 fuel injectors, and 2-stage sequential quad-turbochargers.</p>
+          <ul class="specs-list">
+            <li><span>Configuration</span><strong>90° × 15° W16 (64-Valve)</strong></li>
+            <li><span>Firing Interval</span><strong>45° Even-Firing (8-Throw Ti Crank)</strong></li>
+            <li><span>Output</span><strong>1,600 PS / 1,600 N·m</strong></li>
+            <li><span>Forced Induction</span><strong>2-Stage Sequential Quad-Turbo (4x)</strong></li>
+          </ul>
+        </div>
+        <div class="launch-btn" style="background: var(--bugatti-blue);">Launch 3D Bugatti W16 Simulation →</div>
+      </a>
+    </div>
+
+    <div class="director-banner">
+      <div>
+        <h3>🎬 Automated 30-Second Showcase Director</h3>
+        <p>Watch an automated sizzle reel that cycles through all 3 engines, camera presets, RPM sweeps, and exploded views—with 1-click video recording.</p>
+      </div>
+      <a href="linkedin_demo_recorder.html" class="director-btn">Open Automated Demo Director →</a>
+    </div>
+
+    <footer>
+      Built with Three.js (WebGL) &amp; ES Modules • Zero external dependencies • Works on Desktop &amp; Mobile
+    </footer>
+  </div>
+</body>
+</html>
