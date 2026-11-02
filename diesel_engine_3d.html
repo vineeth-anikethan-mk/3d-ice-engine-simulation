@@ -1,0 +1,2074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive 3D 4-Cylinder Turbocharged Diesel Engine</title>
+  <style>
+    :root {
+      --bg-panel: rgba(15, 19, 26, 0.88);
+      --border-panel: rgba(255, 255, 255, 0.12);
+      --accent: #ff9d00;
+      --accent-blue: #00b4ff;
+      --accent-red: #ff3b30;
+      --text-main: #eef2f7;
+      --text-muted: #9aa5b5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      overflow: hidden;
+      background: radial-gradient(circle at center, #1f2631 0%, #0b0e13 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text-main);
+    }
+
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    .hud-left {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      width: 335px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-panel);
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+      pointer-events: auto;
+    }
+
+    .title-block h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      background: var(--accent);
+      color: #000;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .title-block p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      margin-bottom: 14px;
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .metric-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-top: 2px;
+      color: #fff;
+    }
+
+    .metric-unit {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      margin-left: 3px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .cylinder-status-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cyl-row {
+      display: grid;
+      grid-template-columns: 48px 95px 1fr;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    .cyl-name {
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .cyl-stroke {
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .bar-bg {
+      height: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 3px;
+      transition: background-color 0.05s linear;
+    }
+
+    .hud-right {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 325px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-panel);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+      pointer-events: auto;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+    }
+
+    .control-group {
+      margin-bottom: 12px;
+    }
+
+    .control-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .cam-preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      padding: 7px 9px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--accent);
+    }
+
+    button.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    .toggle-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .toggle-item input {
+      accent-color: var(--accent);
+      width: 14px;
+      height: 14px;
+      cursor: pointer;
+    }
+
+    .hud-bottom {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-panel);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-panel);
+      border-radius: 30px;
+      padding: 8px 20px;
+      display: flex;
+      gap: 18px;
+      font-size: 12px;
+      pointer-events: auto;
+      white-space: nowrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .label-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .part-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      background: rgba(10, 14, 20, 0.85);
+      border: 1px solid rgba(255, 157, 0, 0.6);
+      color: #fff;
+      padding: 4px 9px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      transition: opacity 0.2s;
+    }
+
+    .part-label span {
+      display: block;
+      font-size: 9px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+  </style>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="label-layer" class="label-layer"></div>
+
+  <!-- Left Telemetry & Thermodynamics HUD -->
+  <div class="hud-left">
+    <div class="title-block">
+      <h1>2.0L TDI I4 Engine <span class="badge">CR-DIESEL</span></h1>
+      <p>16-Valve DOHC • VGT Turbo + Intercooler + EGR • 16.5:1 CR</p>
+    </div>
+
+    <div class="telemetry-grid">
+      <div class="metric-card">
+        <div class="metric-label">Engine Speed</div>
+        <div class="metric-value"><span id="val-rpm">1500</span><span class="metric-unit">RPM</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Turbo Boost</div>
+        <div class="metric-value"><span id="val-boost">0.85</span><span class="metric-unit">BAR</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Common Rail</div>
+        <div class="metric-value"><span id="val-rail">1180</span><span class="metric-unit">BAR</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Turbo Speed</div>
+        <div class="metric-value"><span id="val-turbo">74.2</span><span class="metric-unit">kRPM</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Torque Output</div>
+        <div class="metric-value"><span id="val-torque">385</span><span class="metric-unit">N·m</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Exhaust Gas (EGT)</div>
+        <div class="metric-value"><span id="val-egt">490</span><span class="metric-unit">°C</span></div>
+      </div>
+    </div>
+
+    <div class="section-title">Firing Order: 1 - 3 - 4 - 2 (720° 4-Stroke Cycle)</div>
+    <div class="cylinder-status-list">
+      <div class="cyl-row">
+        <span class="cyl-name">CYL 1</span>
+        <span id="stroke-0" class="cyl-stroke">INTAKE</span>
+        <div class="bar-bg"><div id="bar-0" class="bar-fill"></div></div>
+      </div>
+      <div class="cyl-row">
+        <span class="cyl-name">CYL 2</span>
+        <span id="stroke-1" class="cyl-stroke">EXHAUST</span>
+        <div class="bar-bg"><div id="bar-1" class="bar-fill"></div></div>
+      </div>
+      <div class="cyl-row">
+        <span class="cyl-name">CYL 3</span>
+        <span id="stroke-2" class="cyl-stroke">COMPRESS</span>
+        <div class="bar-bg"><div id="bar-2" class="bar-fill"></div></div>
+      </div>
+      <div class="cyl-row">
+        <span class="cyl-name">CYL 4</span>
+        <span id="stroke-3" class="cyl-stroke">POWER</span>
+        <div class="bar-bg"><div id="bar-3" class="bar-fill"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Interactive Controls -->
+  <div class="hud-right">
+    <div class="section-title">Simulation Controls</div>
+
+    <div class="control-group">
+      <div class="control-header">
+        <span>Throttle / Target RPM</span>
+        <span id="lbl-rpm-slider">1500 RPM</span>
+      </div>
+      <input type="range" id="slider-rpm" min="600" max="4500" step="50" value="1500" />
+    </div>
+
+    <div class="control-group">
+      <div class="control-header">
+        <span>Simulation Time Scale</span>
+        <span id="lbl-timescale">0.15x (Slow-Mo)</span>
+      </div>
+      <input type="range" id="slider-speed" min="0.01" max="1.0" step="0.01" value="0.15" />
+    </div>
+
+    <div class="control-group">
+      <div class="control-header">
+        <span>Block Cutaway Opacity</span>
+        <span id="lbl-opacity">28%</span>
+      </div>
+      <input type="range" id="slider-opacity" min="0" max="1" step="0.05" value="0.28" />
+    </div>
+
+    <div class="btn-grid">
+      <button id="btn-pause">Pause Cycle</button>
+      <button id="btn-explode">Exploded View</button>
+    </div>
+
+    <div class="section-title">Component Visibility</div>
+    <div class="toggle-list">
+      <label class="toggle-item">
+        <span>Ribbed Engine Block, Mounts & Sump</span>
+        <input type="checkbox" id="chk-block" checked />
+      </label>
+      <label class="toggle-item">
+        <span>Cylinder Head, Ports & Cam Cover</span>
+        <input type="checkbox" id="chk-head" checked />
+      </label>
+      <label class="toggle-item">
+        <span>VGT Turbo, Oil Lines & Flanged Exhaust</span>
+        <input type="checkbox" id="chk-turbo" checked />
+      </label>
+      <label class="toggle-item">
+        <span>Intercooler, Intake Plenum & EGR</span>
+        <input type="checkbox" id="chk-intake" checked />
+      </label>
+      <label class="toggle-item">
+        <span>DOHC 16-Valve Springs & Tappets</span>
+        <input type="checkbox" id="chk-valvetrain" checked />
+      </label>
+      <label class="toggle-item">
+        <span>Common Rail & Piezo Injectors</span>
+        <input type="checkbox" id="chk-fuel" checked />
+      </label>
+      <label class="toggle-item">
+        <span>Toothed Timing Gears, Belt & Aux</span>
+        <input type="checkbox" id="chk-timing" checked />
+      </label>
+      <label class="toggle-item">
+        <span>3D Engineering Annotations</span>
+        <input type="checkbox" id="chk-labels" checked />
+      </label>
+    </div>
+
+    <div class="section-title">Camera Presets (10 Views)</div>
+    <div class="cam-preset-grid">
+      <button data-cam="iso">Isometric 3/4</button>
+      <button data-cam="turbo">VGT Turbocharger</button>
+      <button data-cam="timing">Front Timing Gears</button>
+      <button data-cam="flywheel">Rear Flywheel</button>
+      <button data-cam="valvetrain">DOHC 16V Cams</button>
+      <button data-cam="commonrail">Common Rail & Inj</button>
+      <button data-cam="intercooler">Front Intercooler</button>
+      <button data-cam="egr">Rear EGR Cooler</button>
+      <button data-cam="combustion">Cutaway Pistons</button>
+      <button data-cam="crank">Bottom Crankshaft</button>
+    </div>
+  </div>
+
+  <!-- Bottom 4-Stroke Legend -->
+  <div class="hud-bottom">
+    <div class="legend-item"><span class="dot" style="background:#00b4ff"></span>Boosted Intercooled Air</div>
+    <div class="legend-item"><span class="dot" style="background:#ffd60a"></span>16.5:1 Adiabatic Compression</div>
+    <div class="legend-item"><span class="dot" style="background:#ff5500"></span>Direct-Injection Auto-Ignition</div>
+    <div class="legend-item"><span class="dot" style="background:#98a2b3"></span>Exhaust Gas → VGT Turbine</div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // ==========================================
+    // 1. SCENE, CAMERA & RENDERER SETUP
+    // ==========================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 200);
+    camera.position.set(15.5, 9.0, -16.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.set(0, 1.8, 0);
+    controls.maxDistance = 45;
+    controls.minDistance = 3.5;
+
+    // ==========================================
+    // 2. STUDIO & AUTOMOTIVE LIGHTING
+    // ==========================================
+    const hemiLight = new THREE.HemisphereLight(0xddeeff, 0x1c2026, 0.95);
+    scene.add(hemiLight);
+
+    const keyLight = new THREE.DirectionalLight(0xfff6e5, 2.5);
+    keyLight.position.set(14, 22, -16);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    scene.add(keyLight);
+
+    const rimLight1 = new THREE.DirectionalLight(0x55aaff, 1.5);
+    rimLight1.position.set(-16, 10, 14);
+    scene.add(rimLight1);
+
+    const rimLight2 = new THREE.DirectionalLight(0xff8833, 1.1);
+    rimLight2.position.set(10, -12, 12);
+    scene.add(rimLight2);
+
+    const grid = new THREE.GridHelper(36, 36, 0x3a4659, 0x1d2430);
+    grid.position.y = -4.3;
+    scene.add(grid);
+
+    // ==========================================
+    // 3. PBR METALLIC & CUTAWAY MATERIALS
+    // ==========================================
+    const mats = {
+      forgedSteel: new THREE.MeshStandardMaterial({ color: 0xd0d7e1, metalness: 0.88, roughness: 0.22 }),
+      polishedChrome: new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.96, roughness: 0.08 }),
+      pistonAlloy: new THREE.MeshStandardMaterial({ color: 0xdce3ec, metalness: 0.82, roughness: 0.28 }),
+      conRodSteel: new THREE.MeshStandardMaterial({ color: 0x8c96a6, metalness: 0.8, roughness: 0.35 }),
+      castIronDark: new THREE.MeshStandardMaterial({ color: 0x262b34, metalness: 0.65, roughness: 0.52 }),
+      castAluminum: new THREE.MeshStandardMaterial({ color: 0x9aa6b8, metalness: 0.78, roughness: 0.32 }),
+      exhaustCast: new THREE.MeshStandardMaterial({
+        color: 0x4a3933,
+        metalness: 0.6,
+        roughness: 0.5,
+        emissive: 0xff3300,
+        emissiveIntensity: 0.0
+      }),
+      compressorAlum: new THREE.MeshStandardMaterial({ color: 0xc8d2de, metalness: 0.85, roughness: 0.25 }),
+      intakeManifold: new THREE.MeshStandardMaterial({ color: 0x1e242d, metalness: 0.45, roughness: 0.42 }),
+      brassInjector: new THREE.MeshStandardMaterial({ color: 0xe5b84b, metalness: 0.85, roughness: 0.25 }),
+      copperWasher: new THREE.MeshStandardMaterial({ color: 0xd97343, metalness: 0.85, roughness: 0.3 }),
+      tdiAccentRed: new THREE.MeshStandardMaterial({ color: 0xe62e2d, metalness: 0.5, roughness: 0.28 }),
+      rubberBelt: new THREE.MeshStandardMaterial({ color: 0x171a21, metalness: 0.15, roughness: 0.82 }),
+      beltMarker: new THREE.MeshBasicMaterial({ color: 0xff9d00 }),
+      blueSilicone: new THREE.MeshStandardMaterial({ color: 0x0066cc, metalness: 0.2, roughness: 0.4 }),
+      airFilterPleat: new THREE.MeshStandardMaterial({ color: 0x8a1c1c, metalness: 0.15, roughness: 0.75 }),
+      cutawayBlock: new THREE.MeshPhysicalMaterial({
+        color: 0x7d8b9e,
+        metalness: 0.35,
+        roughness: 0.25,
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      }),
+      cutawayHead: new THREE.MeshPhysicalMaterial({
+        color: 0x9fb0c7,
+        metalness: 0.4,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.25,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      }),
+      cylinderSleeve: new THREE.MeshPhysicalMaterial({
+        color: 0xaab8cc,
+        metalness: 0.7,
+        roughness: 0.2,
+        transparent: true,
+        opacity: 0.32,
+        depthWrite: false,
+        side: THREE.DoubleSide
+      })
+    };
+
+    // ==========================================
+    // 4. ENGINE KINEMATIC CONSTANTS
+    // ==========================================
+    const CYL_COUNT = 4;
+    const CYL_Z = [-3.3, -1.1, 1.1, 3.3];
+    const CRANK_RADIUS = 0.88;
+    const ROD_LENGTH = 2.95;
+    const BORE_RADIUS = 0.82;
+    const DECK_HEIGHT = 4.65;
+
+    const CRANK_PIN_ANGLES = [0, Math.PI, Math.PI, 0];
+    const FIRING_OFFSETS = [0, 3 * Math.PI, 1 * Math.PI, 2 * Math.PI];
+
+    // ==========================================
+    // 5. COMPONENT GROUPS
+    // ==========================================
+    const engineRoot = new THREE.Group();
+    scene.add(engineRoot);
+
+    const groups = {
+      cranktrain: new THREE.Group(),
+      block: new THREE.Group(),
+      head: new THREE.Group(),
+      valvetrain: new THREE.Group(),
+      fuel: new THREE.Group(),
+      intake: new THREE.Group(),
+      turbo: new THREE.Group(),
+      timing: new THREE.Group()
+    };
+
+    Object.values(groups).forEach(g => engineRoot.add(g));
+
+    const explodeOffsets = {
+      cranktrain: new THREE.Vector3(0, 0, 0),
+      block: new THREE.Vector3(0, -1.5, 0),
+      head: new THREE.Vector3(0, 2.1, 0),
+      valvetrain: new THREE.Vector3(0, 1.4, 0),
+      fuel: new THREE.Vector3(-1.8, 2.7, 0),
+      intake: new THREE.Vector3(-2.6, 0.4, 0),
+      turbo: new THREE.Vector3(2.8, 0.3, 0),
+      timing: new THREE.Vector3(0, 0, -2.4)
+    };
+
+    // ==========================================
+    // 6. HIGH-VISIBILITY ROTATION GEAR & FLYWHEEL BUILDERS
+    // ==========================================
+    function createDetailedTimingGear({
+      radius,
+      thickness = 0.34,
+      teethCount = 24,
+      spokeCount = 5,
+      rimMat = mats.castIronDark,
+      hubMat = mats.polishedChrome,
+      accentMat = mats.brassInjector
+    }) {
+      const gear = new THREE.Group();
+
+      const outerRim = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, thickness, 36).rotateX(Math.PI / 2),
+        rimMat
+      );
+      gear.add(outerRim);
+
+      const toothW = (2 * Math.PI * radius) / (teethCount * 2.1);
+      const toothH = radius * 0.11;
+      const toothGeo = new THREE.BoxGeometry(toothW, toothH, thickness * 0.96);
+      toothGeo.translate(0, radius + toothH * 0.35, 0);
+
+      for (let t = 0; t < teethCount; t++) {
+        const tooth = new THREE.Mesh(toothGeo, mats.polishedChrome);
+        tooth.rotation.z = (t / teethCount) * Math.PI * 2;
+        gear.add(tooth);
+      }
+
+      const webPlate = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius * 0.82, radius * 0.82, thickness * 0.55, 28).rotateX(Math.PI / 2),
+        mats.conRodSteel
+      );
+      gear.add(webPlate);
+
+      for (let s = 0; s < spokeCount; s++) {
+        const angle = (s / spokeCount) * Math.PI * 2;
+        const spoke = new THREE.Mesh(
+          new THREE.BoxGeometry(radius * 0.18, radius * 1.62, thickness * 1.08),
+          s === 0 ? accentMat : hubMat
+        );
+        spoke.rotation.z = angle;
+        gear.add(spoke);
+
+        const bolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(radius * 0.09, radius * 0.09, thickness * 1.22, 6).rotateX(Math.PI / 2),
+          s === 0 ? mats.tdiAccentRed : mats.brassInjector
+        );
+        bolt.position.set(Math.cos(angle) * radius * 0.58, Math.sin(angle) * radius * 0.58, 0);
+        gear.add(bolt);
+      }
+
+      const centerHub = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius * 0.28, radius * 0.28, thickness * 1.25, 18).rotateX(Math.PI / 2),
+        hubMat
+      );
+      const hexNut = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius * 0.16, radius * 0.16, thickness * 1.38, 6).rotateX(Math.PI / 2),
+        accentMat
+      );
+      gear.add(centerHub, hexNut);
+
+      const tdcMark = new THREE.Mesh(
+        new THREE.BoxGeometry(radius * 0.12, radius * 0.26, thickness * 1.28),
+        mats.tdiAccentRed
+      );
+      tdcMark.position.set(0, radius * 0.78, 0);
+      gear.add(tdcMark);
+
+      return gear;
+    }
+
+    function createDetailedFlywheel(radius = 1.9, thickness = 0.42) {
+      const fwGroup = new THREE.Group();
+
+      const mainDisc = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, thickness, 48).rotateX(Math.PI / 2),
+        mats.castIronDark
+      );
+      fwGroup.add(mainDisc);
+
+      const ringTeeth = 36;
+      const tGeo = new THREE.BoxGeometry(0.08, 0.14, thickness * 0.55);
+      tGeo.translate(0, radius + 0.04, -thickness * 0.15);
+      for (let i = 0; i < ringTeeth; i++) {
+        const tooth = new THREE.Mesh(tGeo, mats.polishedChrome);
+        tooth.rotation.z = (i / ringTeeth) * Math.PI * 2;
+        fwGroup.add(tooth);
+      }
+
+      const frictionFace = new THREE.Mesh(
+        new THREE.RingGeometry(radius * 0.42, radius * 0.86, 36),
+        mats.forgedSteel
+      );
+      frictionFace.position.z = thickness * 0.51;
+      fwGroup.add(frictionFace);
+
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const rib = new THREE.Mesh(
+          new THREE.BoxGeometry(0.18, radius * 1.72, thickness * 1.15),
+          i % 2 === 0 ? mats.polishedChrome : mats.brassInjector
+        );
+        rib.rotation.z = a;
+        fwGroup.add(rib);
+
+        const damperPack = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.15, 0.15, thickness * 1.22, 12).rotateX(Math.PI / 2),
+          i === 0 ? mats.tdiAccentRed : mats.copperWasher
+        );
+        damperPack.position.set(Math.cos(a + 0.39) * radius * 0.66, Math.sin(a + 0.39) * radius * 0.66, 0);
+        fwGroup.add(damperPack);
+      }
+
+      const centerFlange = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius * 0.32, radius * 0.32, thickness * 1.25, 24).rotateX(Math.PI / 2),
+        mats.polishedChrome
+      );
+      fwGroup.add(centerFlange);
+
+      return fwGroup;
+    }
+
+    // ==========================================
+    // 7. BUILD CRANKSHAFT & DETAILED FLYWHEEL
+    // ==========================================
+    const crankshaftGroup = new THREE.Group();
+    groups.cranktrain.add(crankshaftGroup);
+
+    const mainJournalGeo = new THREE.CylinderGeometry(0.36, 0.36, 10.6, 24).rotateX(Math.PI / 2);
+    crankshaftGroup.add(new THREE.Mesh(mainJournalGeo, mats.forgedSteel));
+
+    function createCrankWeb(angle, zPos) {
+      const webGroup = new THREE.Group();
+      webGroup.position.z = zPos;
+      webGroup.rotation.z = angle;
+
+      const bodyGeo = new THREE.BoxGeometry(0.78, 1.58, 0.24).translate(0, 0.25, 0);
+      const lobeGeo = new THREE.CylinderGeometry(0.68, 0.68, 0.24, 20).rotateX(Math.PI / 2).translate(0, -0.45, 0);
+      webGroup.add(new THREE.Mesh(bodyGeo, mats.forgedSteel), new THREE.Mesh(lobeGeo, mats.castIronDark));
+      return webGroup;
+    }
+
+    CYL_Z.forEach((z, idx) => {
+      const pinAngle = CRANK_PIN_ANGLES[idx];
+      const pinX = Math.sin(pinAngle) * CRANK_RADIUS;
+      const pinY = Math.cos(pinAngle) * CRANK_RADIUS;
+
+      const pinGeo = new THREE.CylinderGeometry(0.31, 0.31, 0.95, 24).rotateX(Math.PI / 2);
+      const pinMesh = new THREE.Mesh(pinGeo, mats.polishedChrome);
+      pinMesh.position.set(pinX, pinY, z);
+      crankshaftGroup.add(pinMesh);
+
+      crankshaftGroup.add(createCrankWeb(pinAngle, z - 0.56));
+      crankshaftGroup.add(createCrankWeb(pinAngle, z + 0.56));
+    });
+
+    const flywheelGroup = createDetailedFlywheel(1.9, 0.42);
+    flywheelGroup.position.z = 5.25;
+    crankshaftGroup.add(flywheelGroup);
+
+    // ==========================================
+    // 8. PISTONS, BOWL-IN-PISTON CROWNS & CONRODS
+    // ==========================================
+    const pistons = [];
+    const conRods = [];
+    const combustionChambers = [];
+    const combustionLights = [];
+    const sprayCones = [];
+
+    for (let i = 0; i < CYL_COUNT; i++) {
+      const z = CYL_Z[i];
+
+      const pistonGroup = new THREE.Group();
+      pistonGroup.position.set(0, 2.5, z);
+
+      const crownMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(BORE_RADIUS * 0.96, BORE_RADIUS * 0.96, 0.95, 32),
+        mats.pistonAlloy
+      );
+      pistonGroup.add(crownMesh);
+
+      const bowlMesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(BORE_RADIUS * 0.55, BORE_RADIUS * 0.42, 0.08, 24),
+        mats.castIronDark
+      );
+      bowlMesh.position.y = 0.45;
+      pistonGroup.add(bowlMesh);
+
+      [-0.28, -0.14, 0.0].forEach((ry, rIdx) => {
+        const ring = new THREE.Mesh(
+          new THREE.TorusGeometry(BORE_RADIUS * 0.965, 0.024, 12, 36).rotateX(Math.PI / 2),
+          rIdx === 1 ? mats.copperWasher : mats.polishedChrome
+        );
+        ring.position.y = 0.45 + ry;
+        pistonGroup.add(ring);
+      });
+
+      const wristPin = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.2, BORE_RADIUS * 1.75, 20).rotateX(Math.PI / 2),
+        mats.polishedChrome
+      );
+      wristPin.position.y = -0.1;
+      pistonGroup.add(wristPin);
+
+      groups.cranktrain.add(pistonGroup);
+      pistons.push(pistonGroup);
+
+      const rodGroup = new THREE.Group();
+      rodGroup.position.set(0, 0, z);
+
+      const stemGeo = new THREE.BoxGeometry(0.26, ROD_LENGTH, 0.18).translate(0, ROD_LENGTH / 2, 0);
+      const stemMesh = new THREE.Mesh(stemGeo, mats.conRodSteel);
+
+      const flangeGeo = new THREE.BoxGeometry(0.34, ROD_LENGTH * 0.78, 0.06).translate(0, ROD_LENGTH / 2, 0);
+      const flangeFront = new THREE.Mesh(flangeGeo, mats.forgedSteel);
+      flangeFront.position.z = 0.09;
+      const flangeBack = flangeFront.clone();
+      flangeBack.position.z = -0.09;
+
+      const bigEnd = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.46, 0.46, 0.36, 24).rotateX(Math.PI / 2),
+        mats.conRodSteel
+      );
+      const smallEnd = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.28, 0.32, 20).rotateX(Math.PI / 2).translate(0, ROD_LENGTH, 0),
+        mats.conRodSteel
+      );
+
+      rodGroup.add(stemMesh, flangeFront, flangeBack, bigEnd, smallEnd);
+      groups.cranktrain.add(rodGroup);
+      conRods.push(rodGroup);
+
+      const liner = new THREE.Mesh(
+        new THREE.CylinderGeometry(BORE_RADIUS, BORE_RADIUS, 3.6, 32, 1, true),
+        mats.cylinderSleeve
+      );
+      liner.position.set(0, 2.85, z);
+      groups.block.add(liner);
+
+      const gasMat = new THREE.MeshBasicMaterial({
+        color: 0x00b4ff,
+        transparent: true,
+        opacity: 0.35,
+        depthWrite: false
+      });
+      const gasCyl = new THREE.Mesh(
+        new THREE.CylinderGeometry(BORE_RADIUS * 0.93, BORE_RADIUS * 0.93, 1.0, 28),
+        gasMat
+      );
+      groups.cranktrain.add(gasCyl);
+      combustionChambers.push({ mesh: gasCyl, mat: gasMat });
+
+      const flashLight = new THREE.PointLight(0xff6600, 0, 3.8);
+      flashLight.position.set(0, DECK_HEIGHT - 0.35, z);
+      groups.cranktrain.add(flashLight);
+      combustionLights.push(flashLight);
+
+      const sprayGroup = new THREE.Group();
+      sprayGroup.position.set(0, DECK_HEIGHT - 0.05, z);
+      const plumeMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.0,
+        depthWrite: false
+      });
+
+      for (let p = 0; p < 6; p++) {
+        const angle = (p / 6) * Math.PI * 2;
+        const plumeGeo = new THREE.ConeGeometry(0.11, 0.72, 10).translate(0, -0.36, 0);
+        const plume = new THREE.Mesh(plumeGeo, plumeMat);
+        plume.rotation.z = 0.62;
+        plume.rotation.y = angle;
+        sprayGroup.add(plume);
+      }
+      groups.cranktrain.add(sprayGroup);
+      sprayCones.push({ group: sprayGroup, mat: plumeMat });
+    }
+
+    // ==========================================
+    // 9. STRUCTURALLY DETAILED ENGINE BLOCK, RIBS, MOUNTS & SUMP
+    // ==========================================
+    const upperBlock = new THREE.Mesh(
+      new THREE.BoxGeometry(2.45, 3.8, 9.6),
+      mats.cutawayBlock
+    );
+    upperBlock.position.set(0, 2.75, 0);
+    groups.block.add(upperBlock);
+
+    const deckPlate = new THREE.Mesh(
+      new THREE.BoxGeometry(2.68, 0.14, 9.75),
+      mats.forgedSteel
+    );
+    deckPlate.position.set(0, DECK_HEIGHT - 0.04, 0);
+    const headGasket = new THREE.Mesh(
+      new THREE.BoxGeometry(2.72, 0.05, 9.8),
+      mats.copperWasher
+    );
+    headGasket.position.set(0, DECK_HEIGHT + 0.04, 0);
+    groups.block.add(deckPlate, headGasket);
+
+    [-4.4, -2.2, 0, 2.2, 4.4].forEach(z => {
+      [-1.18, 1.18].forEach(x => {
+        const stud = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.08, 2.1, 8),
+          mats.polishedChrome
+        );
+        stud.position.set(x, DECK_HEIGHT + 0.6, z);
+        groups.block.add(stud);
+      });
+    });
+
+    [-3.8, -2.2, -0.6, 0.6, 2.2, 3.8].forEach(z => {
+      [-1.25, 1.25].forEach(x => {
+        const vRib = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 3.4, 0.16),
+          mats.castIronDark
+        );
+        vRib.position.set(x, 2.6, z);
+        groups.block.add(vRib);
+      });
+    });
+    [1.4, 2.6, 3.8].forEach(y => {
+      [-1.25, 1.25].forEach(x => {
+        const hRib = new THREE.Mesh(
+          new THREE.BoxGeometry(0.14, 0.14, 9.4),
+          mats.castIronDark
+        );
+        hRib.position.set(x, y, 0);
+        groups.block.add(hRib);
+      });
+    });
+
+    [-2.8, 0, 2.8].forEach(z => {
+      const plug = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.28, 0.28, 0.08, 20).rotateZ(Math.PI / 2),
+        mats.brassInjector
+      );
+      plug.position.set(-1.26, 2.9, z);
+      groups.block.add(plug);
+    });
+
+    const oilFilterCan = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.42, 0.42, 1.15, 24),
+      mats.castAluminum
+    );
+    oilFilterCan.position.set(-1.65, 1.35, -1.8);
+    oilFilterCan.rotation.z = 0.35;
+    groups.block.add(oilFilterCan);
+
+    [-1, 1].forEach(side => {
+      const mountArm = new THREE.Mesh(
+        new THREE.BoxGeometry(1.1, 0.35, 0.9),
+        mats.castAluminum
+      );
+      mountArm.position.set(side * 1.75, 1.6, 0.5);
+      const bush = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.35, 0.55, 20).rotateX(Math.PI / 2),
+        mats.castIronDark
+      );
+      bush.position.set(side * 2.25, 1.5, 0.5);
+      groups.block.add(mountArm, bush);
+    });
+
+    const crankCaseSkirt = new THREE.Mesh(
+      new THREE.BoxGeometry(2.9, 1.9, 9.6),
+      mats.cutawayBlock
+    );
+    crankCaseSkirt.position.set(0, -0.1, 0);
+    groups.block.add(crankCaseSkirt);
+
+    const oilPan = new THREE.Mesh(
+      new THREE.BoxGeometry(2.55, 1.15, 9.2),
+      mats.castIronDark
+    );
+    oilPan.position.set(0, -1.65, 0);
+    groups.block.add(oilPan);
+
+    for (let f = -1.0; f <= 1.0; f += 0.25) {
+      const fin = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 0.18, 8.8),
+        mats.castAluminum
+      );
+      fin.position.set(f, -2.28, 0);
+      groups.block.add(fin);
+    }
+
+    [-4.4, -2.2, 0, 2.2, 4.4].forEach(z => {
+      const bulkhead = new THREE.Mesh(
+        new THREE.BoxGeometry(2.35, 1.5, 0.28),
+        mats.castIronDark
+      );
+      bulkhead.position.set(0, 0.1, z);
+      groups.block.add(bulkhead);
+    });
+
+    const bellHousingRing = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.25, 2.25, 0.55, 36, 1, true).rotateX(Math.PI / 2),
+      mats.castAluminum
+    );
+    bellHousingRing.position.set(0, 0, 4.95);
+    groups.block.add(bellHousingRing);
+
+    // ==========================================
+    // 10. COMPLETE DOHC 16-VALVE CYLINDER HEAD, PORTS & VALVETRAIN
+    // ==========================================
+    const headMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(2.65, 1.55, 9.6),
+      mats.cutawayHead
+    );
+    headMesh.position.set(0, DECK_HEIGHT + 0.78, 0);
+    groups.head.add(headMesh);
+
+    [-4.1, -2.2, 0, 2.2, 4.1].forEach(z => {
+      const bridge = new THREE.Mesh(
+        new THREE.BoxGeometry(1.85, 0.28, 0.26),
+        mats.castAluminum
+      );
+      bridge.position.set(0, DECK_HEIGHT + 1.38, z);
+      groups.head.add(bridge);
+    });
+
+    const coverRim = new THREE.Mesh(
+      new THREE.BoxGeometry(2.45, 0.16, 9.4),
+      mats.castIronDark
+    );
+    coverRim.position.set(0, DECK_HEIGHT + 1.62, 0);
+    const tdiBadge = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.12, 3.2),
+      mats.tdiAccentRed
+    );
+    tdiBadge.position.set(-0.85, DECK_HEIGHT + 1.72, 0);
+    const oilFillerCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.28, 0.26, 20),
+      mats.castIronDark
+    );
+    oilFillerCap.position.set(0.55, DECK_HEIGHT + 1.82, -3.2);
+    groups.head.add(coverRim, tdiBadge, oilFillerCap);
+
+    function createHelicalSpringGeo(radius = 0.13, height = 0.52, turns = 5.5, wireRadius = 0.022) {
+      const pts = [];
+      const steps = 64;
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const angle = t * Math.PI * 2 * turns;
+        pts.push(new THREE.Vector3(Math.cos(angle) * radius, t * height, Math.sin(angle) * radius));
+      }
+      const curve = new THREE.CatmullRomCurve3(pts);
+      return new THREE.TubeGeometry(curve, 64, wireRadius, 8, false);
+    }
+    const sharedValveSpringGeo = createHelicalSpringGeo(0.125, 0.52, 5.5, 0.021);
+
+    const intakeCamGroup = new THREE.Group();
+    intakeCamGroup.position.set(-0.58, DECK_HEIGHT + 1.18, 0);
+    const exhaustCamGroup = new THREE.Group();
+    exhaustCamGroup.position.set(0.58, DECK_HEIGHT + 1.18, 0);
+    groups.valvetrain.add(intakeCamGroup, exhaustCamGroup);
+
+    const camShaftGeo = new THREE.CylinderGeometry(0.14, 0.14, 10.2, 20).rotateX(Math.PI / 2);
+    intakeCamGroup.add(new THREE.Mesh(camShaftGeo, mats.forgedSteel));
+    exhaustCamGroup.add(new THREE.Mesh(camShaftGeo, mats.forgedSteel));
+
+    const intakeValves = [];
+    const exhaustValves = [];
+
+    function createCamLobe(lobeAngle) {
+      const lobeGroup = new THREE.Group();
+      lobeGroup.rotation.z = lobeAngle;
+      const baseCircle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.23, 0.23, 0.18, 20).rotateX(Math.PI / 2),
+        mats.polishedChrome
+      );
+      const nose = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.21, 0.24, 16),
+        mats.polishedChrome
+      );
+      nose.position.y = -0.22;
+      lobeGroup.add(baseCircle, nose);
+      return lobeGroup;
+    }
+
+    function createCompleteValveAssembly(isExhaust, xPos, zPos, tiltAngle) {
+      const seatGroup = new THREE.Group();
+      seatGroup.position.set(xPos, DECK_HEIGHT + 0.02, zPos);
+      seatGroup.rotation.z = tiltAngle;
+
+      const seatRing = new THREE.Mesh(
+        new THREE.TorusGeometry(0.22, 0.032, 12, 24).rotateX(Math.PI / 2),
+        isExhaust ? mats.copperWasher : mats.forgedSteel
+      );
+      const bronzeGuide = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.075, 0.075, 0.48, 14).translate(0, 0.42, 0),
+        mats.brassInjector
+      );
+      const coilSpring = new THREE.Mesh(sharedValveSpringGeo, mats.conRodSteel);
+      coilSpring.position.y = 0.22;
+
+      seatGroup.add(seatRing, bronzeGuide, coilSpring);
+      groups.valvetrain.add(seatGroup);
+
+      const sideSign = isExhaust ? 1 : -1;
+      const portCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(xPos, DECK_HEIGHT + 0.12, zPos),
+        new THREE.Vector3(sideSign * 0.85, DECK_HEIGHT + 0.42, zPos),
+        new THREE.Vector3(sideSign * 1.32, DECK_HEIGHT + 0.46, zPos)
+      ]);
+      const portDuct = new THREE.Mesh(
+        new THREE.TubeGeometry(portCurve, 12, 0.16, 12, false),
+        isExhaust ? mats.exhaustCast : mats.compressorAlum
+      );
+      groups.head.add(portDuct);
+
+      const vGroup = new THREE.Group();
+      vGroup.position.set(xPos, DECK_HEIGHT + 0.02, zPos);
+      vGroup.rotation.z = tiltAngle;
+
+      const discHead = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.23, 0.23, 0.035, 24),
+        isExhaust ? mats.exhaustCast : mats.forgedSteel
+      );
+      const tulipFillet = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.045, 0.22, 0.11, 20).translate(0, 0.06, 0),
+        isExhaust ? mats.exhaustCast : mats.forgedSteel
+      );
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.042, 0.042, 0.92, 12).translate(0, 0.48, 0),
+        mats.polishedChrome
+      );
+      const retainer = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.11, 0.08, 16).translate(0, 0.74, 0),
+        mats.brassInjector
+      );
+      const bucketTappet = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.18, 0.22, 20).translate(0, 0.88, 0),
+        mats.polishedChrome
+      );
+
+      vGroup.add(discHead, tulipFillet, stem, retainer, bucketTappet);
+      groups.valvetrain.add(vGroup);
+
+      return { vGroup, coilSpring };
+    }
+
+    CYL_Z.forEach((z, idx) => {
+      const fireOffset = FIRING_OFFSETS[idx];
+      const intakeCamAngle = -(fireOffset + 3.5 * Math.PI) * 0.5;
+      const exhaustCamAngle = -(fireOffset + 2.5 * Math.PI) * 0.5;
+
+      [-0.36, 0.36].forEach(dz => {
+        const inLobe = createCamLobe(intakeCamAngle);
+        inLobe.position.z = z + dz;
+        intakeCamGroup.add(inLobe);
+
+        const inAssy = createCompleteValveAssembly(false, -0.42, z + dz, -0.18);
+        intakeValves.push({ mesh: inAssy.vGroup, spring: inAssy.coilSpring, cylIndex: idx, tilt: -0.18, baseX: -0.42 });
+
+        const exLobe = createCamLobe(exhaustCamAngle);
+        exLobe.position.z = z + dz;
+        exhaustCamGroup.add(exLobe);
+
+        const exAssy = createCompleteValveAssembly(true, 0.42, z + dz, 0.18);
+        exhaustValves.push({ mesh: exAssy.vGroup, spring: exAssy.coilSpring, cylIndex: idx, tilt: 0.18, baseX: 0.42 });
+      });
+    });
+
+    // ==========================================
+    // 11. COMMON-RAIL FUEL SYSTEM & PIEZO INJECTORS
+    // ==========================================
+    const railTube = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.16, 8.2, 20).rotateX(Math.PI / 2),
+      mats.forgedSteel
+    );
+    railTube.position.set(-1.35, DECK_HEIGHT + 1.05, 0);
+    groups.fuel.add(railTube);
+
+    const railSensor = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 0.55, 16).rotateX(Math.PI / 2),
+      mats.brassInjector
+    );
+    railSensor.position.set(-1.35, DECK_HEIGHT + 1.05, 4.3);
+    groups.fuel.add(railSensor);
+
+    const cp4SupplyCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-1.18, 3.15, -4.0),
+      new THREE.Vector3(-1.55, 4.4, -4.1),
+      new THREE.Vector3(-1.35, DECK_HEIGHT + 1.05, -3.9)
+    ]);
+    groups.fuel.add(
+      new THREE.Mesh(new THREE.TubeGeometry(cp4SupplyCurve, 20, 0.045, 10, false), mats.polishedChrome)
+    );
+
+    CYL_Z.forEach(z => {
+      const injGroup = new THREE.Group();
+      injGroup.position.set(0, DECK_HEIGHT + 0.85, z);
+
+      const nozzle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.07, 0.05, 0.85, 16),
+        mats.forgedSteel
+      );
+      nozzle.position.y = -0.42;
+
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.13, 0.9, 20),
+        mats.castIronDark
+      );
+      body.position.y = 0.35;
+
+      const solenoidCap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.17, 0.17, 0.32, 20),
+        mats.brassInjector
+      );
+      solenoidCap.position.y = 0.9;
+
+      const copperTip = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 0.08, 16),
+        mats.copperWasher
+      );
+      copperTip.position.y = -0.82;
+
+      injGroup.add(nozzle, body, solenoidCap, copperTip);
+      groups.fuel.add(injGroup);
+
+      const hpCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-1.35, DECK_HEIGHT + 1.05, z),
+        new THREE.Vector3(-0.95, DECK_HEIGHT + 1.95, z),
+        new THREE.Vector3(0, DECK_HEIGHT + 1.75, z)
+      ]);
+      const hpLine = new THREE.Mesh(
+        new THREE.TubeGeometry(hpCurve, 18, 0.038, 10, false),
+        mats.polishedChrome
+      );
+      groups.fuel.add(hpLine);
+    });
+
+    // ==========================================
+    // 12. COMPLETE TURBOCHARGER PLUMBING, FLANGES, OIL LINES & BRACKETS
+    // ==========================================
+    const turboPos = new THREE.Vector3(2.95, 3.25, 0.0);
+    const exhaustRunnerCurves = []; // Store each cylinder's exact exhaust runner curve for particle flow!
+
+    const exManifoldPlate = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.72, 8.6),
+      mats.forgedSteel
+    );
+    exManifoldPlate.position.set(1.34, DECK_HEIGHT + 0.45, 0);
+    groups.turbo.add(exManifoldPlate);
+
+    CYL_Z.forEach(z => {
+      const portFlange = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 0.62, 0.95),
+        mats.exhaustCast
+      );
+      portFlange.position.set(1.38, DECK_HEIGHT + 0.45, z);
+      groups.turbo.add(portFlange);
+
+      [-0.36, 0.36].forEach(dz => {
+        const bolt = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.05, 0.05, 0.26, 6).rotateZ(Math.PI / 2),
+          mats.brassInjector
+        );
+        bolt.position.set(1.42, DECK_HEIGHT + 0.7, z + dz);
+        groups.turbo.add(bolt);
+      });
+
+      const exCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(1.32, DECK_HEIGHT + 0.45, z),
+        new THREE.Vector3(2.25, DECK_HEIGHT + 0.2, z * 0.65),
+        new THREE.Vector3(turboPos.x, turboPos.y + 0.58, 0.45)
+      ]);
+      const runner = new THREE.Mesh(
+        new THREE.TubeGeometry(exCurve, 24, 0.25, 14, false),
+        mats.exhaustCast
+      );
+      groups.turbo.add(runner);
+
+      // Full continuous path from this cylinder's exhaust port -> runner -> turbine scroll -> downpipe!
+      const fullExhaustParticleCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(1.32, DECK_HEIGHT + 0.45, z),
+        new THREE.Vector3(2.25, DECK_HEIGHT + 0.2, z * 0.65),
+        new THREE.Vector3(turboPos.x, turboPos.y + 0.58, 0.45),
+        new THREE.Vector3(turboPos.x, turboPos.y, 0.75),
+        new THREE.Vector3(turboPos.x + 0.35, turboPos.y - 0.4, 2.2),
+        new THREE.Vector3(turboPos.x + 0.45, turboPos.y - 1.8, 4.2)
+      ]);
+      exhaustRunnerCurves.push(fullExhaustParticleCurve);
+    });
+
+    const t3CollectorFlange = new THREE.Mesh(
+      new THREE.BoxGeometry(0.85, 0.18, 0.85),
+      mats.forgedSteel
+    );
+    t3CollectorFlange.position.set(turboPos.x, turboPos.y + 0.62, 0.45);
+    groups.turbo.add(t3CollectorFlange);
+
+    const turboSupportBracket = new THREE.Mesh(
+      new THREE.BoxGeometry(1.75, 0.32, 0.65),
+      mats.castAluminum
+    );
+    turboSupportBracket.position.set(2.05, 2.35, 0.0);
+    turboSupportBracket.rotation.z = 0.42;
+    groups.turbo.add(turboSupportBracket);
+
+    const oilFeedCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(1.22, 2.85, -0.8),
+      new THREE.Vector3(2.15, 4.15, -0.45),
+      new THREE.Vector3(turboPos.x, turboPos.y + 0.46, 0.0)
+    ]);
+    const oilFeedLine = new THREE.Mesh(
+      new THREE.TubeGeometry(oilFeedCurve, 20, 0.048, 10, false),
+      mats.polishedChrome
+    );
+    const oilFeedFitting = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.09, 0.18, 6),
+      mats.brassInjector
+    );
+    oilFeedFitting.position.set(turboPos.x, turboPos.y + 0.48, 0.0);
+    groups.turbo.add(oilFeedLine, oilFeedFitting);
+
+    const oilDrainCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(turboPos.x, turboPos.y - 0.46, 0.0),
+      new THREE.Vector3(2.45, 0.85, 0.0),
+      new THREE.Vector3(1.26, -1.35, 0.0)
+    ]);
+    const oilDrainPipe = new THREE.Mesh(
+      new THREE.TubeGeometry(oilDrainCurve, 20, 0.095, 12, false),
+      mats.copperWasher
+    );
+    groups.turbo.add(oilDrainPipe);
+
+    const turboAssembly = new THREE.Group();
+    turboAssembly.position.copy(turboPos);
+    groups.turbo.add(turboAssembly);
+
+    const chra = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.48, 0.48, 0.9, 24).rotateX(Math.PI / 2),
+      mats.castIronDark
+    );
+    turboAssembly.add(chra);
+
+    const waterLineCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, -0.15),
+      new THREE.Vector3(-0.85, -0.15, -0.35),
+      new THREE.Vector3(-1.72, -0.1, -0.5)
+    ]);
+    turboAssembly.add(
+      new THREE.Mesh(new THREE.TubeGeometry(waterLineCurve, 14, 0.045, 8, false), mats.blueSilicone)
+    );
+
+    const turbineScroll = new THREE.Mesh(
+      new THREE.TorusGeometry(0.76, 0.34, 20, 36),
+      mats.exhaustCast
+    );
+    turbineScroll.position.z = 0.48;
+    turboAssembly.add(turbineScroll);
+
+    const turbineCutout = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.68, 0.68, 0.35, 24, 1, true).rotateX(Math.PI / 2),
+      mats.exhaustCast
+    );
+    turbineCutout.position.z = 0.55;
+    turboAssembly.add(turbineCutout);
+
+    const vBandDownpipe = new THREE.Mesh(
+      new THREE.TorusGeometry(0.42, 0.055, 12, 24),
+      mats.polishedChrome
+    );
+    vBandDownpipe.position.z = 0.76;
+    turboAssembly.add(vBandDownpipe);
+
+    const downpipeCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0.75),
+      new THREE.Vector3(0.35, -0.4, 2.2),
+      new THREE.Vector3(0.45, -1.8, 4.2)
+    ]);
+    const downpipe = new THREE.Mesh(
+      new THREE.TubeGeometry(downpipeCurve, 24, 0.36, 16, false),
+      mats.exhaustCast
+    );
+    turboAssembly.add(downpipe);
+
+    const compScroll = new THREE.Mesh(
+      new THREE.TorusGeometry(0.82, 0.36, 20, 36),
+      mats.compressorAlum
+    );
+    compScroll.position.z = -0.48;
+    turboAssembly.add(compScroll);
+
+    const bellmouth = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.66, 0.52, 0.42, 28, 1, true).rotateX(Math.PI / 2),
+      mats.polishedChrome
+    );
+    bellmouth.position.z = -0.78;
+    turboAssembly.add(bellmouth);
+
+    const airFilterCone = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.52, 0.72, 0.95, 24).rotateX(Math.PI / 2),
+      mats.airFilterPleat
+    );
+    airFilterCone.position.z = -1.42;
+    const filterCap = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.53, 0.53, 0.08, 24).rotateX(Math.PI / 2),
+      mats.polishedChrome
+    );
+    filterCap.position.z = -1.92;
+    turboAssembly.add(airFilterCone, filterCap);
+
+    const turboRotorGroup = new THREE.Group();
+    turboAssembly.add(turboRotorGroup);
+
+    const turboShaft = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.09, 1.65, 16).rotateX(Math.PI / 2),
+      mats.polishedChrome
+    );
+    turboRotorGroup.add(turboShaft);
+
+    function createImpellerWheel(radius, zPos, bladeColorMat, direction) {
+      const wheel = new THREE.Group();
+      wheel.position.z = zPos;
+      const hub = new THREE.Mesh(
+        new THREE.ConeGeometry(radius * 0.42, 0.38, 20).rotateX(direction * Math.PI / 2),
+        bladeColorMat
+      );
+      wheel.add(hub);
+
+      const bladeGeo = new THREE.BoxGeometry(radius * 0.88, 0.032, 0.26).translate(radius * 0.42, 0, 0);
+      for (let b = 0; b < 12; b++) {
+        const bladePivot = new THREE.Group();
+        bladePivot.rotation.z = (b / 12) * Math.PI * 2;
+        const blade = new THREE.Mesh(bladeGeo, bladeColorMat);
+        blade.rotation.x = 0.42 * direction;
+        bladePivot.add(blade);
+        wheel.add(bladePivot);
+      }
+      return wheel;
+    }
+
+    turboRotorGroup.add(createImpellerWheel(0.62, 0.55, mats.copperWasher, 1));
+    turboRotorGroup.add(createImpellerWheel(0.66, -0.58, mats.polishedChrome, -1));
+
+    const actuatorCan = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.28, 0.45, 20).rotateX(Math.PI / 2),
+      mats.brassInjector
+    );
+    actuatorCan.position.set(0.75, 0.85, -0.4);
+    const actuatorRod = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.035, 0.035, 0.9, 10).rotateX(Math.PI / 2),
+      mats.polishedChrome
+    );
+    actuatorRod.position.set(0.75, 0.85, 0.05);
+    turboAssembly.add(actuatorCan, actuatorRod);
+
+    // ==========================================
+    // 13. COMPLETE INTERCOOLER CORE, THROTTLE BODY, INTAKE FLANGES & EGR PIPE
+    // ==========================================
+    const plenum = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.52, 0.52, 8.2, 24).rotateX(Math.PI / 2),
+      mats.intakeManifold
+    );
+    plenum.position.set(-2.25, DECK_HEIGHT + 0.35, 0);
+    groups.intake.add(plenum);
+
+    const inManifoldPlate = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.72, 8.6),
+      mats.castAluminum
+    );
+    inManifoldPlate.position.set(-1.34, DECK_HEIGHT + 0.48, 0);
+    groups.intake.add(inManifoldPlate);
+
+    CYL_Z.forEach(z => {
+      const inFlange = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 0.58, 0.92),
+        mats.intakeManifold
+      );
+      inFlange.position.set(-1.38, DECK_HEIGHT + 0.48, z);
+      groups.intake.add(inFlange);
+
+      const inCurve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(-2.25, DECK_HEIGHT + 0.35, z),
+        new THREE.Vector3(-1.75, DECK_HEIGHT + 0.72, z),
+        new THREE.Vector3(-1.32, DECK_HEIGHT + 0.48, z)
+      ]);
+      const inRunner = new THREE.Mesh(
+        new THREE.TubeGeometry(inCurve, 18, 0.24, 14, false),
+        mats.intakeManifold
+      );
+      groups.intake.add(inRunner);
+    });
+
+    const icCore = new THREE.Mesh(
+      new THREE.BoxGeometry(2.6, 0.68, 0.75),
+      mats.compressorAlum
+    );
+    icCore.position.set(0.0, 5.8, -5.05);
+    groups.intake.add(icCore);
+
+    for (let f = -1.1; f <= 1.1; f += 0.22) {
+      const fin = new THREE.Mesh(
+        new THREE.BoxGeometry(0.04, 0.72, 0.78),
+        mats.polishedChrome
+      );
+      fin.position.set(f, 5.8, -5.05);
+      groups.intake.add(fin);
+    }
+
+    const throttleBody = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.38, 0.38, 0.45, 20).rotateX(Math.PI / 2),
+      mats.castAluminum
+    );
+    throttleBody.position.set(-2.25, DECK_HEIGHT + 0.35, -4.25);
+    groups.intake.add(throttleBody);
+
+    const chargePipeCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(turboPos.x, turboPos.y + 0.75, -0.48),
+      new THREE.Vector3(2.6, 5.5, -4.6),
+      new THREE.Vector3(0.0, 5.8, -5.05),
+      new THREE.Vector3(-2.25, 5.3, -4.5),
+      new THREE.Vector3(-2.25, DECK_HEIGHT + 0.35, -4.1)
+    ]);
+    const chargePipe = new THREE.Mesh(
+      new THREE.TubeGeometry(chargePipeCurve, 44, 0.28, 16, false),
+      mats.compressorAlum
+    );
+    groups.intake.add(chargePipe);
+
+    [
+      new THREE.Vector3(turboPos.x, turboPos.y + 0.9, -0.48),
+      new THREE.Vector3(1.45, 5.75, -5.0),
+      new THREE.Vector3(-1.45, 5.75, -5.0),
+      new THREE.Vector3(-2.25, DECK_HEIGHT + 0.55, -4.25)
+    ].forEach(cPos => {
+      const coupler = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.33, 0.33, 0.36, 20),
+        mats.blueSilicone
+      );
+      coupler.position.copy(cPos);
+      groups.intake.add(coupler);
+    });
+
+    const egrCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(1.55, DECK_HEIGHT + 0.45, 3.8),
+      new THREE.Vector3(0.85, DECK_HEIGHT + 0.95, 4.95),
+      new THREE.Vector3(-0.85, DECK_HEIGHT + 0.95, 4.95),
+      new THREE.Vector3(-2.25, DECK_HEIGHT + 0.35, 3.9)
+    ]);
+    const egrPipe = new THREE.Mesh(
+      new THREE.TubeGeometry(egrCurve, 24, 0.16, 12, false),
+      mats.copperWasher
+    );
+    const egrCoolerBox = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 0.42, 0.42),
+      mats.polishedChrome
+    );
+    egrCoolerBox.position.set(0, DECK_HEIGHT + 0.95, 4.95);
+    groups.intake.add(egrPipe, egrCoolerBox);
+
+    // ==========================================
+    // 14. FRONT TIMING GEARS, TRAVELING TIMING BELT & ACCESSORIES
+    // ==========================================
+    const frontZ = -5.15;
+    const timingGears = [];
+
+    function addTimingGear(opts) {
+      const gear = createDetailedTimingGear(opts);
+      gear.position.set(opts.x, opts.y, opts.z ?? frontZ);
+      groups.timing.add(gear);
+      timingGears.push({ mesh: gear, ratio: opts.ratio });
+      return gear;
+    }
+
+    addTimingGear({ x: 0, y: 0, radius: 0.66, teethCount: 22, spokeCount: 6, ratio: 1.0, rimMat: mats.forgedSteel });
+    addTimingGear({ x: -0.58, y: DECK_HEIGHT + 1.18, radius: 0.60, teethCount: 28, spokeCount: 5, ratio: 0.5 });
+    addTimingGear({ x: 0.58, y: DECK_HEIGHT + 1.18, radius: 0.60, teethCount: 28, spokeCount: 5, ratio: 0.5 });
+    addTimingGear({ x: -1.18, y: 3.15, radius: 0.48, teethCount: 20, spokeCount: 4, ratio: 0.5, accentMat: mats.tdiAccentRed });
+    addTimingGear({ x: 0.88, y: 2.75, radius: 0.38, teethCount: 16, spokeCount: 4, ratio: -1.6 });
+    addTimingGear({ x: 0.72, y: 1.25, radius: 0.28, teethCount: 14, spokeCount: 3, ratio: -2.1 });
+
+    const alternatorBody = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.68, 0.68, 1.35, 20).rotateX(Math.PI / 2),
+      mats.castAluminum
+    );
+    alternatorBody.position.set(-1.75, 0.45, -4.1);
+    groups.block.add(alternatorBody);
+
+    const hpfpBody = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.45, 0.45, 1.2, 16).rotateX(Math.PI / 2),
+      mats.castIronDark
+    );
+    hpfpBody.position.set(-1.18, 3.15, -4.2);
+    groups.block.add(hpfpBody);
+
+    addTimingGear({ x: -1.75, y: 0.45, z: frontZ - 0.35, radius: 0.42, teethCount: 18, spokeCount: 5, ratio: 1.8 });
+    addTimingGear({ x: 0, y: 0, z: frontZ - 0.35, radius: 0.74, teethCount: 24, spokeCount: 6, ratio: 1.0 });
+
+    const beltPoints3D = [
+      new THREE.Vector3(0, -0.68, frontZ),
+      new THREE.Vector3(-0.66, -0.15, frontZ),
+      new THREE.Vector3(-1.66, 3.15, frontZ),
+      new THREE.Vector3(-1.18, DECK_HEIGHT + 1.25, frontZ),
+      new THREE.Vector3(-0.58, DECK_HEIGHT + 1.82, frontZ),
+      new THREE.Vector3(0.58, DECK_HEIGHT + 1.82, frontZ),
+      new THREE.Vector3(1.18, DECK_HEIGHT + 1.25, frontZ),
+      new THREE.Vector3(1.26, 2.75, frontZ),
+      new THREE.Vector3(1.02, 1.25, frontZ),
+      new THREE.Vector3(0.66, -0.15, frontZ)
+    ];
+    const beltCurve3D = new THREE.CatmullRomCurve3(beltPoints3D, true, 'catmullrom', 0.2);
+    const timingBeltMesh = new THREE.Mesh(
+      new THREE.TubeGeometry(beltCurve3D, 120, 0.085, 10, true),
+      mats.rubberBelt
+    );
+    groups.timing.add(timingBeltMesh);
+
+    const beltCleats = [];
+    const cleatGeo = new THREE.BoxGeometry(0.18, 0.07, 0.24);
+    for (let c = 0; c < 36; c++) {
+      const cleat = new THREE.Mesh(cleatGeo, c % 6 === 0 ? mats.beltMarker : mats.forgedSteel);
+      groups.timing.add(cleat);
+      beltCleats.push({ mesh: cleat, baseT: c / 36 });
+    }
+
+    // ==========================================
+    // 15. ACCURATE PIPE-ALIGNED AIRFLOW & EXHAUST PARTICLE STREAM
+    // ==========================================
+    // Fixed: Previously sampleExhaustCurve started at z = 0 (between Cyl 2 and Cyl 3 where no pipe exists!).
+    // Now every exhaust particle travels strictly inside one of the 4 actual exhaust runners (exhaustRunnerCurves[0..3])!
+    const PARTICLE_COUNT = 80;
+    const flowParticles = [];
+    const sphereGeo = new THREE.SphereGeometry(0.08, 8, 8);
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const isIntake = i < PARTICLE_COUNT / 2;
+      const pMat = new THREE.MeshBasicMaterial({
+        color: isIntake ? 0x00ccff : 0xff5500,
+        transparent: true,
+        opacity: 0.85
+      });
+      const pMesh = new THREE.Mesh(sphereGeo, pMat);
+      if (isIntake) groups.intake.add(pMesh);
+      else groups.turbo.add(pMesh);
+
+      const curve = isIntake ? chargePipeCurve : exhaustRunnerCurves[i % CYL_COUNT];
+      flowParticles.push({
+        mesh: pMesh,
+        curve,
+        t: (i / PARTICLE_COUNT + Math.random() * 0.25) % 1.0,
+        speedOffset: 0.88 + Math.random() * 0.24
+      });
+    }
+
+    // ==========================================
+    // 16. 3D FLOATING CALLOUT LABELS
+    // ==========================================
+    const labelLayer = document.getElementById('label-layer');
+    const annotations = [
+      {
+        title: 'VGT Turbo + Oil Feed & Drain Lines',
+        sub: 'Bolted T3 Flange, CHRA Oil Plumbing & Air Filter',
+        pos: new THREE.Vector3(3.25, 4.4, 0),
+        groupKey: 'turbo'
+      },
+      {
+        title: 'Charge-Air Intercooler & EGR Cooler',
+        sub: 'Finned Heat Exchanger + Silicone Couplers',
+        pos: new THREE.Vector3(0.0, 6.45, -5.05),
+        groupKey: 'intake'
+      },
+      {
+        title: 'CNC Vernier Timing Gears & Belt',
+        sub: 'Toothed Cam Sprockets + CP4 Pump Drive',
+        pos: new THREE.Vector3(0.0, 4.8, -5.4),
+        groupKey: 'timing'
+      },
+      {
+        title: 'DOHC 16V Springs, Tappets & Ports',
+        sub: 'Helical Coil Springs + Internal Head Runners',
+        pos: new THREE.Vector3(0.0, 6.45, 2.2),
+        groupKey: 'valvetrain'
+      },
+      {
+        title: 'Dual-Mass Toothed Flywheel',
+        sub: '36-Tooth Ring Gear + Clutch Friction Plate',
+        pos: new THREE.Vector3(0.0, 2.2, 5.35),
+        groupKey: 'cranktrain'
+      }
+    ];
+
+    annotations.forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'part-label';
+      el.innerHTML = `${item.title}<span>${item.sub}</span>`;
+      labelLayer.appendChild(el);
+      item.el = el;
+    });
+
+    // ==========================================
+    // 17. UI INTERACTIVITY & 10 CAMERA PRESETS
+    // ==========================================
+    let targetRPM = 1500;
+    let currentRPM = 1500;
+    let timeScale = 0.15;
+    let isPaused = false;
+    let isExploded = false;
+    let explodeFactor = 0;
+    let showLabels = true;
+
+    const sliderRpm = document.getElementById('slider-rpm');
+    const lblRpmSlider = document.getElementById('lbl-rpm-slider');
+    sliderRpm.addEventListener('input', e => {
+      targetRPM = parseFloat(e.target.value);
+      lblRpmSlider.textContent = `${targetRPM} RPM`;
+    });
+
+    const sliderSpeed = document.getElementById('slider-speed');
+    const lblTimescale = document.getElementById('lbl-timescale');
+    sliderSpeed.addEventListener('input', e => {
+      timeScale = parseFloat(e.target.value);
+      lblTimescale.textContent = `${timeScale.toFixed(2)}x`;
+    });
+
+    const sliderOpacity = document.getElementById('slider-opacity');
+    const lblOpacity = document.getElementById('lbl-opacity');
+    sliderOpacity.addEventListener('input', e => {
+      const op = parseFloat(e.target.value);
+      mats.cutawayBlock.opacity = op;
+      mats.cutawayHead.opacity = op * 0.9;
+      mats.cylinderSleeve.opacity = Math.min(1, op + 0.08);
+      lblOpacity.textContent = `${Math.round(op * 100)}%`;
+    });
+
+    const btnPause = document.getElementById('btn-pause');
+    btnPause.addEventListener('click', () => {
+      isPaused = !isPaused;
+      btnPause.classList.toggle('active', isPaused);
+      btnPause.textContent = isPaused ? 'Resume Cycle' : 'Pause Cycle';
+    });
+
+    const btnExplode = document.getElementById('btn-explode');
+    btnExplode.addEventListener('click', () => {
+      isExploded = !isExploded;
+      btnExplode.classList.toggle('active', isExploded);
+    });
+
+    const visibilityMap = [
+      ['chk-block', 'block'],
+      ['chk-head', 'head'],
+      ['chk-turbo', 'turbo'],
+      ['chk-intake', 'intake'],
+      ['chk-valvetrain', 'valvetrain'],
+      ['chk-fuel', 'fuel'],
+      ['chk-timing', 'timing']
+    ];
+    visibilityMap.forEach(([id, key]) => {
+      document.getElementById(id).addEventListener('change', e => {
+        groups[key].visible = e.target.checked;
+      });
+    });
+
+    document.getElementById('chk-labels').addEventListener('change', e => {
+      showLabels = e.target.checked;
+      labelLayer.style.display = showLabels ? 'block' : 'none';
+    });
+
+    let camTargetPos = null;
+    let camTargetLook = null;
+
+    const camPresets = {
+      iso: { pos: new THREE.Vector3(15.5, 9.0, -16.5), look: new THREE.Vector3(0, 1.8, 0) },
+      turbo: { pos: new THREE.Vector3(9.8, 5.5, -5.8), look: new THREE.Vector3(2.2, 3.2, 0.0) },
+      timing: { pos: new THREE.Vector3(0.0, 3.2, -14.5), look: new THREE.Vector3(0, 2.8, -4.5) },
+      flywheel: { pos: new THREE.Vector3(6.5, 2.5, 13.5), look: new THREE.Vector3(0, 0.4, 4.8) },
+      valvetrain: { pos: new THREE.Vector3(0.2, 11.2, -5.5), look: new THREE.Vector3(0, 5.2, 0.0) },
+      commonrail: { pos: new THREE.Vector3(-8.5, 7.2, -4.5), look: new THREE.Vector3(-0.8, 5.2, 0.0) },
+      intercooler: { pos: new THREE.Vector3(4.5, 7.8, -12.5), look: new THREE.Vector3(0.0, 5.5, -4.8) },
+      egr: { pos: new THREE.Vector3(-5.5, 7.5, 12.0), look: new THREE.Vector3(0.0, 5.2, 4.4) },
+      combustion: { pos: new THREE.Vector3(7.2, 3.8, -2.5), look: new THREE.Vector3(0.0, 3.2, -1.1) },
+      crank: { pos: new THREE.Vector3(8.5, -3.6, -7.5), look: new THREE.Vector3(0.0, 0.2, 0.0) }
+    };
+
+    document.querySelectorAll('[data-cam]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const preset = camPresets[btn.dataset.cam];
+        if (preset) {
+          camTargetPos = preset.pos.clone();
+          camTargetLook = preset.look.clone();
+        }
+      });
+    });
+
+    controls.addEventListener('start', () => {
+      camTargetPos = null;
+      camTargetLook = null;
+    });
+
+    // ==========================================
+    // 18. THERMODYNAMIC & KINEMATIC LOOP
+    // ==========================================
+    const elRpm = document.getElementById('val-rpm');
+    const elBoost = document.getElementById('val-boost');
+    const elRail = document.getElementById('val-rail');
+    const elTurbo = document.getElementById('val-turbo');
+    const elTorque = document.getElementById('val-torque');
+    const elEgt = document.getElementById('val-egt');
+
+    const strokeEls = [0, 1, 2, 3].map(i => document.getElementById(`stroke-${i}`));
+    const barEls = [0, 1, 2, 3].map(i => document.getElementById(`bar-${i}`));
+
+    const colorIntake = new THREE.Color(0x00b4ff);
+    const colorCompress = new THREE.Color(0xffd60a);
+    const colorPower = new THREE.Color(0xff4500);
+    const colorExhaust = new THREE.Color(0x8892a0);
+
+    let crankAngle = 0;
+    let beltTravel = 0;
+    let lastTime = performance.now();
+    const tmpPos = new THREE.Vector3();
+    const tmpTan = new THREE.Vector3();
+
+    function animate(now) {
+      requestAnimationFrame(animate);
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      currentRPM += (targetRPM - currentRPM) * Math.min(1, dt * 5);
+      const targetExplode = isExploded ? 1 : 0;
+      explodeFactor += (targetExplode - explodeFactor) * Math.min(1, dt * 6);
+
+      Object.keys(groups).forEach(key => {
+        groups[key].position.lerpVectors(new THREE.Vector3(0, 0, 0), explodeOffsets[key], explodeFactor);
+      });
+
+      if (camTargetPos && camTargetLook) {
+        camera.position.lerp(camTargetPos, dt * 4.5);
+        controls.target.lerp(camTargetLook, dt * 4.5);
+        if (camera.position.distanceTo(camTargetPos) < 0.08) {
+          camTargetPos = null;
+          camTargetLook = null;
+        }
+      }
+
+      if (!isPaused) {
+        const radPerSec = (currentRPM / 60) * Math.PI * 2;
+        const deltaAngle = radPerSec * dt * timeScale;
+        crankAngle = (crankAngle + deltaAngle) % (Math.PI * 4);
+        beltTravel = (beltTravel + deltaAngle * 0.038) % 1.0;
+      }
+
+      crankshaftGroup.rotation.z = -crankAngle;
+      intakeCamGroup.rotation.z = -crankAngle * 0.5;
+      exhaustCamGroup.rotation.z = -crankAngle * 0.5;
+      timingGears.forEach(g => {
+        g.mesh.rotation.z = -crankAngle * g.ratio;
+      });
+
+      beltCleats.forEach(c => {
+        const u = (c.baseT + beltTravel) % 1.0;
+        beltCurve3D.getPointAt(u, tmpPos);
+        beltCurve3D.getTangentAt(u, tmpTan);
+        c.mesh.position.copy(tmpPos);
+        c.mesh.rotation.z = Math.atan2(tmpTan.y, tmpTan.x);
+      });
+
+      const rpmNorm = (currentRPM - 600) / (4500 - 600);
+      const boostBar = 0.25 + Math.pow(rpmNorm, 1.25) * 1.95;
+      const railBar = Math.round(550 + rpmNorm * 1650);
+      const turboKRpm = 28 + Math.pow(rpmNorm, 1.15) * 142;
+      const egtTemp = Math.round(310 + rpmNorm * 490);
+      const torqueNm = Math.round(240 + Math.sin(Math.min(1, rpmNorm * 1.35) * Math.PI) * 185);
+
+      elRpm.textContent = Math.round(currentRPM);
+      elBoost.textContent = boostBar.toFixed(2);
+      elRail.textContent = railBar;
+      elTurbo.textContent = turboKRpm.toFixed(1);
+      elTorque.textContent = torqueNm;
+      elEgt.textContent = egtTemp;
+
+      mats.exhaustCast.emissiveIntensity = Math.max(0, (egtTemp - 420) / 700);
+
+      if (!isPaused) {
+        turboRotorGroup.rotation.z -= dt * (18 + rpmNorm * 55) * (0.3 + timeScale);
+      }
+
+      for (let i = 0; i < CYL_COUNT; i++) {
+        const pinAngle = crankAngle - CRANK_PIN_ANGLES[i];
+        const pinX = Math.sin(pinAngle) * CRANK_RADIUS;
+        const pinY = Math.cos(pinAngle) * CRANK_RADIUS;
+
+        const rodVertical = Math.sqrt(ROD_LENGTH * ROD_LENGTH - pinX * pinX);
+        const wristPinY = pinY + rodVertical;
+
+        pistons[i].position.y = wristPinY + 0.1;
+
+        conRods[i].position.x = pinX;
+        conRods[i].position.y = pinY;
+        conRods[i].rotation.z = Math.asin(pinX / ROD_LENGTH);
+
+        const phase = (crankAngle - FIRING_OFFSETS[i] + Math.PI * 8) % (Math.PI * 4);
+        const deg = (phase * 180) / Math.PI;
+
+        let strokeName = '';
+        let strokeColor = '#00b4ff';
+        let progress = 0;
+
+        const chamber = combustionChambers[i];
+        const flash = combustionLights[i];
+        const spray = sprayCones[i];
+
+        flash.intensity = 0;
+        spray.mat.opacity = 0;
+
+        if (deg < 180) {
+          strokeName = 'POWER';
+          strokeColor = '#ff5500';
+          progress = (deg / 180) * 100;
+          const norm = deg / 180;
+          chamber.mat.color.lerpColors(colorPower, colorExhaust, Math.pow(norm, 0.65));
+          chamber.mat.opacity = 0.82 * (1 - norm * 0.55);
+
+          if (deg < 32) {
+            const sprayStrength = Math.sin((deg / 32) * Math.PI);
+            spray.mat.opacity = sprayStrength * 0.9;
+            flash.intensity = sprayStrength * 8.5;
+          } else if (deg < 85) {
+            flash.intensity = Math.max(0, (1 - (deg - 32) / 53) * 3.0);
+          }
+        } else if (deg < 360) {
+          strokeName = 'EXHAUST';
+          strokeColor = '#98a2b3';
+          progress = ((deg - 180) / 180) * 100;
+          chamber.mat.color.copy(colorExhaust);
+          chamber.mat.opacity = 0.35;
+        } else if (deg < 540) {
+          strokeName = 'INTAKE';
+          strokeColor = '#00b4ff';
+          progress = ((deg - 360) / 180) * 100;
+          chamber.mat.color.copy(colorIntake);
+          chamber.mat.opacity = 0.32 + ((deg - 360) / 180) * 0.15;
+        } else {
+          strokeName = 'COMPRESS';
+          strokeColor = '#ffd60a';
+          progress = ((deg - 540) / 180) * 100;
+          const norm = (deg - 540) / 180;
+          chamber.mat.color.lerpColors(colorIntake, colorCompress, Math.pow(norm, 1.3));
+          chamber.mat.opacity = 0.35 + norm * 0.48;
+
+          if (deg > 704) {
+            spray.mat.opacity = ((deg - 704) / 16) * 0.65;
+            flash.intensity = ((deg - 704) / 16) * 3.5;
+          }
+        }
+
+        const pistonTopY = pistons[i].position.y + 0.48;
+        const clearanceHeight = Math.max(0.08, DECK_HEIGHT - pistonTopY);
+        chamber.mesh.scale.y = clearanceHeight;
+        chamber.mesh.position.set(0, pistonTopY + clearanceHeight / 2, CYL_Z[i]);
+
+        strokeEls[i].textContent = strokeName;
+        strokeEls[i].style.background = `${strokeColor}28`;
+        strokeEls[i].style.color = strokeColor;
+        barEls[i].style.width = `${progress}%`;
+        barEls[i].style.backgroundColor = strokeColor;
+      }
+
+      intakeValves.forEach(v => {
+        const phase = (crankAngle - FIRING_OFFSETS[v.cylIndex] + Math.PI * 8) % (Math.PI * 4);
+        const deg = (phase * 180) / Math.PI;
+        let lift = 0;
+        if (deg >= 350 && deg <= 550) {
+          lift = Math.sin(((deg - 350) / 200) * Math.PI) * 0.28;
+        }
+        v.mesh.position.x = v.baseX + Math.sin(v.tilt) * lift;
+        v.mesh.position.y = DECK_HEIGHT + 0.02 - Math.cos(v.tilt) * lift;
+        v.spring.scale.y = 1 - lift * 1.15;
+      });
+
+      exhaustValves.forEach(v => {
+        const phase = (crankAngle - FIRING_OFFSETS[v.cylIndex] + Math.PI * 8) % (Math.PI * 4);
+        const deg = (phase * 180) / Math.PI;
+        let lift = 0;
+        if (deg >= 165 && deg <= 370) {
+          lift = Math.sin(((deg - 165) / 205) * Math.PI) * 0.28;
+        }
+        v.mesh.position.x = v.baseX + Math.sin(v.tilt) * lift;
+        v.mesh.position.y = DECK_HEIGHT + 0.02 - Math.cos(v.tilt) * lift;
+        v.spring.scale.y = 1 - lift * 1.15;
+      });
+
+      // Animate Intake & Exhaust Flow Particles strictly inside their actual Runner & Downpipe Curves
+      if (!isPaused) {
+        const particleRate = dt * (0.35 + rpmNorm * 1.1) * (0.25 + timeScale * 0.75);
+        flowParticles.forEach(p => {
+          p.t = (p.t + particleRate * p.speedOffset) % 1.0;
+          p.curve.getPointAt(p.t, p.mesh.position);
+        });
+      }
+
+      if (showLabels) {
+        const halfW = window.innerWidth / 2;
+        const halfH = window.innerHeight / 2;
+        annotations.forEach(item => {
+          const groupVisible = groups[item.groupKey].visible;
+          if (!groupVisible) {
+            item.el.style.opacity = '0';
+            return;
+          }
+          const worldVec = item.pos.clone().add(groups[item.groupKey].position);
+          worldVec.project(camera);
+
+          if (worldVec.z > 1) {
+            item.el.style.opacity = '0';
+          } else {
+            const x = worldVec.x * halfW + halfW;
+            const y = -(worldVec.y * halfH) + halfH;
+            item.el.style.opacity = '1';
+            item.el.style.left = `${x}px`;
+            item.el.style.top = `${y}px`;
+          }
+        });
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
